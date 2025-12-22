@@ -132,6 +132,7 @@ class BaseModel(torch.nn.Module):
         Returns:
             (torch.Tensor): Loss if x is a dict (training), or network predictions (inference).
         """
+        LOGGER.info("=============== forward ================")
         if isinstance(x, dict):  # for cases of training and validating while training.
             return self.loss(x, *args, **kwargs)
         return self.predict(x, *args, **kwargs)
@@ -149,6 +150,7 @@ class BaseModel(torch.nn.Module):
         Returns:
             (torch.Tensor): The last output of the model.
         """
+        LOGGER.info("=============== predict ================")
         if augment:
             return self._predict_augment(x)
         return self._predict_once(x, profile, visualize, embed)
@@ -165,6 +167,7 @@ class BaseModel(torch.nn.Module):
         Returns:
             (torch.Tensor): The last output of the model.
         """
+        LOGGER.info("=============== _predict_once ================")
         y, dt, embeddings = [], [], []  # outputs
         embed = frozenset(embed) if embed is not None else {-1}
         max_idx = max(embed)
@@ -320,6 +323,7 @@ class BaseModel(torch.nn.Module):
             batch (dict): Batch to compute loss on.
             preds (torch.Tensor | list[torch.Tensor], optional): Predictions.
         """
+        LOGGER.info("=============== loss ================")
         if getattr(self, "criterion", None) is None:
             self.criterion = self.init_criterion()
 
