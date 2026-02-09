@@ -399,7 +399,14 @@ class BaseTrainer:
         if self.world_size > 1:
             self._setup_ddp()
         self._setup_train()
-
+        salun_mode = getattr(self.args, "salun_mask", False)
+        forget_class = getattr(self.args, "forget_class", 5)
+        salun_batches = getattr(self.args, "salun_batches", 200)
+        keep_ratio = getattr(self.args, "salun_keep_ratio", 0.2)
+    
+        if salun_mode:
+            LOGGER.info("🔥 Running SalUn MASK GENERATION MODE")
+            salun = SalUnAccumulator(self.model, restrict_head=True)
         nb = len(self.train_loader)  # number of batches
         nw = max(round(self.args.warmup_epochs * nb), 100) if self.args.warmup_epochs > 0 else -1  # warmup iterations
         last_opt_step = -1
@@ -469,20 +476,35 @@ class BaseTrainer:
 
                 # Backward
                 self.scaler.scale(self.loss).backward()
-                if ni - last_opt_step >= self.accumulate:
-                    self.optimizer_step()
-                    last_opt_step = ni
+                # if ni - last_opt_step >= self.accumulate:
+                #     self.optimizer_step()
+                #     last_opt_step = ni
 
-                    # Timed stopping
-                    if self.args.time:
-                        self.stop = (time.time() - self.train_time_start) > (self.args.time * 3600)
-                        if RANK != -1:  # if DDP training
-                            broadcast_list = [self.stop if RANK == 0 else None]
-                            dist.broadcast_object_list(broadcast_list, 0)  # broadcast 'stop' to all ranks
-                            self.stop = broadcast_list[0]
-                        if self.stop:  # training time exceeded
-                            break
-
+                #     # Timed stopping
+                #     if self.args.time:
+                #         self.stop = (time.time() - self.train_time_start) > (self.args.time * 3600)
+                #         if RANK != -1:  # if DDP training
+                #             broadcast_list = [self.stop if RANK == 0 else None]
+                #             dist.broadcast_object_list(broadcast_list, 0)  # broadcast 'stop' to all ranks
+                #             self.stop = broadcast_list[0]
+                #         if self.stop:  # training time exceeded
+                #             break
+                    if salun_mode:
+                    salun.accumulate()
+            
+                    # clear grads – cực kỳ quan trọng
+                    self.model.zero_grad(set_to_none=True)
+            
+                    if i + 1 >= salun_batches:
+                        LOGGER.info(f"✅ Collected gradients from {salun_batches} batches")
+            
+                        mask = salun.build_mask(keep_ratio)
+            
+                        save_path = self.save_dir / f"salun_mask_cls{forget_class}.pt"
+                        torch.save(mask, save_path)
+            
+                        LOGGER.info(f"💾 SalUn mask saved to {save_path}")
+                        return
                 # Log
                 if RANK in {-1, 0}:
                     loss_length = self.tloss.shape[0] if len(self.tloss.shape) else 1
