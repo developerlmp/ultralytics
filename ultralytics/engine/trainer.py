@@ -399,10 +399,10 @@ class BaseTrainer:
         if self.world_size > 1:
             self._setup_ddp()
         self._setup_train()
-        salun_mode = getattr(self.args, "salun_mask", False)
-        forget_class = getattr(self.args, "forget_class", 5)
-        salun_batches = getattr(self.args, "salun_batches", 200)
-        keep_ratio = getattr(self.args, "salun_keep_ratio", 0.2)
+        salun_mode = True
+        forget_class = 5
+        salun_batches = 280
+        keep_ratio = 0.5
     
         if salun_mode:
             LOGGER.info("🔥 Running SalUn MASK GENERATION MODE")
