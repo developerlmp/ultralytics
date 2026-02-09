@@ -89,7 +89,7 @@ class SalUnAccumulator:
             self.scores[name] += (p.data * p.grad).abs()
 
     @torch.no_grad()
-    def build_mask(self, keep_ratio=0.2):
+    def build_mask(self, keep_ratio=0.5):
         # concat all scores
         all_scores = torch.cat([v.flatten() for v in self.scores.values()])
         threshold = torch.quantile(all_scores, 1 - keep_ratio)
