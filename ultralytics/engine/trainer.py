@@ -61,7 +61,44 @@ from ultralytics.utils.torch_utils import (
     unwrap_model,
 )
 
+import torch
 
+class SalUnAccumulator:
+    def __init__(self, model, restrict_head=True):
+        self.model = model
+        self.restrict_head = restrict_head
+        self.scores = {}
+
+        for name, p in model.named_parameters():
+            if restrict_head and not self._is_head_param(name):
+                continue
+            self.scores[name] = torch.zeros_like(p, device=p.device)
+
+    def _is_head_param(self, name):
+        # YOLOv8 detection head keywords
+        return any(k in name for k in ["head", "cv2", "cv3", "dfl"])
+
+    @torch.no_grad()
+    def accumulate(self):
+        for name, p in self.model.named_parameters():
+            if name not in self.scores:
+                continue
+            if p.grad is None:
+                continue
+            # SalUn saliency: |w * grad|
+            self.scores[name] += (p.data * p.grad).abs()
+
+    @torch.no_grad()
+    def build_mask(self, keep_ratio=0.2):
+        # concat all scores
+        all_scores = torch.cat([v.flatten() for v in self.scores.values()])
+        threshold = torch.quantile(all_scores, 1 - keep_ratio)
+
+        mask = {}
+        for name, v in self.scores.items():
+            mask[name] = (v >= threshold).float()
+        return mask
+        
 class BaseTrainer:
     """A base class for creating trainers.
 
