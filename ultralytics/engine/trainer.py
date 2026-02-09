@@ -489,22 +489,22 @@ class BaseTrainer:
                 #             self.stop = broadcast_list[0]
                 #         if self.stop:  # training time exceeded
                 #             break
-                    if salun_mode:
-                    salun.accumulate()
-            
-                    # clear grads – cực kỳ quan trọng
-                    self.model.zero_grad(set_to_none=True)
-            
-                    if i + 1 >= salun_batches:
-                        LOGGER.info(f"✅ Collected gradients from {salun_batches} batches")
-            
-                        mask = salun.build_mask(keep_ratio)
-            
-                        save_path = self.save_dir / f"salun_mask_cls{forget_class}.pt"
-                        torch.save(mask, save_path)
-            
-                        LOGGER.info(f"💾 SalUn mask saved to {save_path}")
-                        return
+                if salun_mode:
+                salun.accumulate()
+        
+                # clear grads – cực kỳ quan trọng
+                self.model.zero_grad(set_to_none=True)
+        
+                if i + 1 >= salun_batches:
+                    LOGGER.info(f"✅ Collected gradients from {salun_batches} batches")
+        
+                    mask = salun.build_mask(keep_ratio)
+        
+                    save_path = self.save_dir / f"salun_mask_cls{forget_class}.pt"
+                    torch.save(mask, save_path)
+        
+                    LOGGER.info(f"💾 SalUn mask saved to {save_path}")
+                    return
                 # Log
                 if RANK in {-1, 0}:
                     loss_length = self.tloss.shape[0] if len(self.tloss.shape) else 1
