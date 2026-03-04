@@ -496,7 +496,7 @@ class BaseTrainer:
                     # Forward + loss
                     if self.args.compile:
                         preds = self.model(salun_batch["img"])
-                        loss, _ = unwrap_model(self.model).loss(salun_batch, preds)
+                        loss, _ = unwrap_model(self.model).loss(preds,salun_batch)
                     else:
                         loss, _ = self.model(salun_batch)
                 
