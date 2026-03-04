@@ -244,7 +244,7 @@ class v8DetectionLoss:
             self,
             preds,
             batch,
-            forget_class: int=4,
+            forget_class: int=5,
             unlearn: bool = True,
         ):
             """
